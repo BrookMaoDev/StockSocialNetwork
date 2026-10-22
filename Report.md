@@ -164,8 +164,6 @@ Under our stated functional dependency assumptions, every nontrivial FD has a su
 
 Therefore, all relations satisfy BCNF and no decomposition is needed.
 
-
-
 ## Task 4 - Queries in Relational Algebra
 
 We define the following five actions:
