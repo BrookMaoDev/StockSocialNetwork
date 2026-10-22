@@ -6,11 +6,11 @@
 
 ### Note the following:
 
-- Passwords are not stored in the database, only their salted hashes
+- Passwords are not stored in the database, only their salted hashes (the password attribute holds the hash)
 - Sharing of lists is allowed only between friends
 - A list creator can review their own list
 - Friend status could be one of: pending, accepted, rejected, removed
-- Users must name their portfolios uniquely
+- Each user must name their own portfolios uniquely (different users may reuse the same portfolio name)
 - New daily stock information goes in the same entity as the historical data
 
 ## Task 2 - Relational Schema
@@ -69,6 +69,8 @@ Foreign Key: symbol2 references stocks(symbol), on delete cascade
 - Similarly, if stocks A and B are a pair in the _pair_stats_ table, then they will be sorted lexicographically (preventing duplicates)
 
 ## Task 3 - Normalization
+
+We assume each table's only nontrivial FDs are those whose LHS is its primary key.
 
 ### Entities
 
@@ -182,9 +184,9 @@ Given a username u:
 - Make a new relation B(friend) by selecting all tuples in friends where recipient = u and status = accepted, then projecting requester.
 - Take the union of A and B.
 
-A(friend) = π<sub>recipient</sub>(σ<sub>requester = u ∧ status = 'accepted'</sub>(friends))
+A = ρ<sub>A(friend)</sub>(π<sub>recipient</sub>(σ<sub>requester = u ∧ status = 'accepted'</sub>(friends)))
 
-B(friend) = π<sub>requester</sub>(σ<sub>recipient = u ∧ status = 'accepted'</sub>(friends))
+B = ρ<sub>B(friend)</sub>(π<sub>requester</sub>(σ<sub>recipient = u ∧ status = 'accepted'</sub>(friends)))
 
 Then get the result A ∪ B
 
