@@ -24,7 +24,7 @@ LIBS = -l:libpqxx.a -lpq
 # Source files
 #
 #
-SRCS = pgsample.cpp
+SRCS = main.cpp
 
 #
 # Output executable
