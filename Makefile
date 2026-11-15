@@ -30,7 +30,7 @@ SRCS = main.cpp
 # Output executable
 #
 #
-TARGET = pgsample
+TARGET = stocksocial
 
 #
 # Default target
