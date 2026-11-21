@@ -42,7 +42,7 @@ all: $(TARGET)
 # Rule to build the target executable
 #
 #
-$(TARGET): $(SRCS)
+$(TARGET): $(SRCS) schema.sql
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $(TARGET) $(SRCS) $(LIBS)
 
 #
