@@ -22,9 +22,9 @@ CREATE TABLE IF NOT EXISTS stocks (
 CREATE TABLE IF NOT EXISTS daily_prices (
     symbol      VARCHAR(8) REFERENCES stocks ON DELETE CASCADE,
     "timestamp" DATE,
-    open        DOUBLE PRECISION NOT NULL,
-    high        DOUBLE PRECISION NOT NULL,
-    low         DOUBLE PRECISION NOT NULL,
+    open        DOUBLE PRECISION, -- a few historical rows only have close
+    high        DOUBLE PRECISION,
+    low         DOUBLE PRECISION,
     close       DOUBLE PRECISION NOT NULL,
     volume      BIGINT NOT NULL CHECK (volume >= 0),
     PRIMARY KEY (symbol, "timestamp")
