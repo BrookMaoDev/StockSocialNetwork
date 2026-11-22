@@ -218,9 +218,13 @@ static void sell(Session &s, const std::string &name) {
 
 // Lets the user pick one of the portfolio's holdings and shows its history.
 static void holding_history(Session &s, const std::string &name) {
-    pqxx::nontransaction tx(s.conn);
-    auto res = tx.exec("SELECT symbol FROM holds WHERE username = $1 AND portfolio_name = $2 ORDER BY symbol",
-                       pqxx::params{s.username, name});
+    pqxx::result res;
+    {
+        // Scoped: tx must end before show_history starts its own (one per connection).
+        pqxx::nontransaction tx(s.conn);
+        res = tx.exec("SELECT symbol FROM holds WHERE username = $1 AND portfolio_name = $2 ORDER BY symbol",
+                      pqxx::params{s.username, name});
+    }
     if (res.empty()) {
         std::cout << "No stock holdings" << std::endl;
         return;
