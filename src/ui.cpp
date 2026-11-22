@@ -105,6 +105,22 @@ int prompt_int(const std::string &label, int min, int max) {
     }
 }
 
+std::optional<int> choose(const std::vector<std::string> &options, const std::string &label,
+                          const std::string &empty_message) {
+    if (options.empty()) {
+        std::cout << empty_message << std::endl;
+        return std::nullopt;
+    }
+    for (size_t i = 0; i < options.size(); ++i) {
+        std::cout << i + 1 << ". " << options[i] << "\n";
+    }
+    int choice = prompt_int(label + " (0 to cancel)", 0, options.size());
+    if (choice == 0) {
+        return std::nullopt;
+    }
+    return choice - 1;
+}
+
 void run_menu(const std::string &title, const std::vector<MenuItem> &items,
               const std::string &exit_label, const std::function<bool()> &done) {
     while (true) {

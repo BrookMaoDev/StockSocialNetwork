@@ -137,3 +137,20 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE TRIGGER shared_with_requires_friendship
     BEFORE INSERT OR UPDATE ON shared_with
     FOR EACH ROW EXECUTE FUNCTION check_share_is_friend();
+
+-- When a friendship ends, unshare lists between the two users, since lists can
+-- only be shared with friends.
+CREATE OR REPLACE FUNCTION unshare_on_unfriend() RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM shared_with sw USING lists l
+    WHERE sw.list_id = l.id
+      AND ((l.creator = OLD.requester AND sw.username = OLD.recipient)
+        OR (l.creator = OLD.recipient AND sw.username = OLD.requester));
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER friends_unshare_on_unfriend
+    AFTER UPDATE OF status ON friends
+    FOR EACH ROW WHEN (OLD.status = 'accepted' AND NEW.status <> 'accepted')
+    EXECUTE FUNCTION unshare_on_unfriend();

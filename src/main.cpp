@@ -3,6 +3,7 @@
 
 #include "auth.hpp"
 #include "db.hpp"
+#include "friends.hpp"
 #include "portfolio.hpp"
 #include "session.hpp"
 #include "stocks.hpp"
@@ -16,7 +17,7 @@ static void main_menu(Session &session) {
     run_menu("Logged in as " + session.username, {
         {"Portfolios", [&] { portfolios_menu(session); }},
         {"Stocks", [&] { stocks_menu(session); }},
-        {"Friends", not_implemented},
+        {"Friends", [&] { friends_menu(session); }},
         {"Stock lists", not_implemented},
         {"Log out", [&] { session.username.clear(); }},
     }, "Quit", [&] { return session.username.empty(); });

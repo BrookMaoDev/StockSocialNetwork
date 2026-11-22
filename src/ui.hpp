@@ -27,6 +27,11 @@ std::optional<std::string> prompt_decimal(const std::string &label, bool optiona
 std::string prompt_amount(const std::string &label);
 int prompt_int(const std::string &label, int min, int max);
 
+// Prints `options` numbered from 1 and returns the index of the chosen one, or
+// nullopt if the user enters 0. Prints `empty_message` if there are no options.
+std::optional<int> choose(const std::vector<std::string> &options, const std::string &label,
+                          const std::string &empty_message);
+
 struct MenuItem {
     std::string label;
     std::function<void()> action;
