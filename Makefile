@@ -24,7 +24,7 @@ LIBS = -l:libpqxx.a -lpq
 # Source files
 #
 #
-SRCS = main.cpp
+SRCS = $(wildcard src/*.cpp)
 
 #
 # Output executable
@@ -42,7 +42,7 @@ all: $(TARGET)
 # Rule to build the target executable
 #
 #
-$(TARGET): $(SRCS) schema.sql
+$(TARGET): $(SRCS) $(wildcard src/*.hpp) sql/schema.sql
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $(TARGET) $(SRCS) $(LIBS)
 
 #

@@ -1,20 +1,19 @@
 #include <array>
 #include <cstdlib>
-#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
 
-#include <pqxx/pqxx>
+#include "db.hpp"
 
 static const char SCHEMA_SQL[] = {
-#embed "schema.sql"
+#embed "../sql/schema.sql"
     , '\0'
 };
 
 static const std::string APP_DB = "stocksocial";
-static const char *HISTORY_CSV = "SP500History.csv";
+static const char *HISTORY_CSV = "data/SP500History.csv";
 
 static std::string env_or(const char *name, const char *fallback) {
     const char *value = std::getenv(name);
@@ -111,19 +110,10 @@ static void load_history(pqxx::connection &conn) {
     tx.commit();
 }
 
-int main(int argc, char *argv[]) {
-    bool reset = argc > 1 && std::strcmp(argv[1], "--reset") == 0;
-
-    try {
-        ensure_database(reset);
-        pqxx::connection conn(conninfo(APP_DB));
-        apply_schema(conn);
-        load_history(conn);
-        std::cout << "Connected to " << conn.dbname() << std::endl;
-    } catch (const std::exception &e) {
-        std::cerr << "Database error: " << e.what() << std::endl;
-        return 1;
-    }
-
-    return 0;
+pqxx::connection setup_database(bool reset) {
+    ensure_database(reset);
+    pqxx::connection conn(conninfo(APP_DB));
+    apply_schema(conn);
+    load_history(conn);
+    return conn;
 }
