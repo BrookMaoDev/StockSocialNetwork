@@ -81,6 +81,12 @@ std::string prompt_symbol(const std::string &label) {
     return s;
 }
 
+bool confirm(const std::string &question) {
+    std::string answer = prompt(question + " (y/N)");
+    std::transform(answer.begin(), answer.end(), answer.begin(), ::tolower);
+    return answer == "y" || answer == "yes";
+}
+
 std::optional<std::string> prompt_decimal(const std::string &label, bool optional) {
     static const std::regex decimal(R"(\d+(\.\d+)?)");
     while (true) {
@@ -88,10 +94,11 @@ std::optional<std::string> prompt_decimal(const std::string &label, bool optiona
         if (raw.empty() && optional) {
             return std::nullopt;
         }
-        if (std::regex_match(raw, decimal)) {
+        bool positive = raw.find_first_not_of("0.") != std::string::npos;
+        if (std::regex_match(raw, decimal) && positive) {
             return raw;
         }
-        std::cout << "Enter a number like 42 or 158.37" << std::endl;
+        std::cout << "Enter a positive number like 42 or 158.37" << std::endl;
     }
 }
 

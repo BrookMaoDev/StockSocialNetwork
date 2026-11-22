@@ -52,7 +52,7 @@ void show_history(Session &s, const std::string &symbol) {
               << closes.back() << " (" << std::showpos << change << std::noshowpos << "%)"
               << std::defaultfloat << std::endl;
 
-    if (prompt("Show table? (y/N)") == "y") {
+    if (confirm("Show table?")) {
         std::cout << std::left << std::setw(12) << "Date" << std::setw(10) << "Open"
                   << std::setw(10) << "High" << std::setw(10) << "Low" << std::setw(10) << "Close"
                   << "Volume\n";
@@ -72,15 +72,23 @@ static void add_price(Session &s) {
         std::cout << "Symbol must be 1 to 8 characters" << std::endl;
         return;
     }
+    std::string date;
     {
         pqxx::nontransaction tx(s.conn);
         bool known = tx.query_value<bool>("SELECT EXISTS (SELECT 1 FROM stocks WHERE symbol = $1)",
                                           pqxx::params{symbol});
-        if (!known && prompt(symbol + " is a new symbol, add it? (y/N)") != "y") {
+        if (!known && !confirm(symbol + " is a new symbol, add it?")) {
+            return;
+        }
+        // Check the date on its own, so the insert's data_exception can only mean a bad number.
+        date = prompt("Date (YYYY-MM-DD)");
+        try {
+            tx.exec("SELECT $1::date", pqxx::params{date});
+        } catch (const pqxx::data_exception &) {
+            std::cout << "Invalid date " << date << std::endl;
             return;
         }
     }
-    std::string date = prompt("Date (YYYY-MM-DD)");
     auto open = prompt_decimal("Open (blank if unknown)", true);
     auto high = prompt_decimal("High (blank if unknown)", true);
     auto low = prompt_decimal("Low (blank if unknown)", true);
@@ -100,7 +108,7 @@ static void add_price(Session &s) {
     } catch (const pqxx::unique_violation &) {
         std::cout << symbol << " already has a price for " << date << std::endl;
     } catch (const pqxx::data_exception &) {
-        std::cout << "Invalid date " << date << std::endl;
+        std::cout << "A price is too large" << std::endl;
     }
 }
 

@@ -179,7 +179,7 @@ static void unshare(Session &s, const List &l) {
 
 // Returns true if the list was deleted.
 static bool delete_list(Session &s, const List &l) {
-    if (prompt("Delete " + l.name + " and its reviews? (y/N)") != "y") {
+    if (!confirm("Delete " + l.name + " and its reviews?")) {
         return false;
     }
     pqxx::work tx(s.conn);

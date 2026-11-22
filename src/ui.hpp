@@ -22,7 +22,10 @@ std::string prompt_password(const std::string &label);
 // Reads a stock symbol, uppercased.
 std::string prompt_symbol(const std::string &label);
 
-// Reads a non-negative decimal number as text. If `optional`, a blank line
+// Asks a yes/no question, defaulting to no. Accepts y/yes in any case.
+bool confirm(const std::string &question);
+
+// Reads a positive decimal number as text. If `optional`, a blank line
 // returns nullopt (stored as NULL).
 std::optional<std::string> prompt_decimal(const std::string &label, bool optional);
 
