@@ -14,6 +14,9 @@ struct InputClosed : std::runtime_error {
 std::string prompt(const std::string &label);
 // Reads one line without echoing it to the terminal. Not trimmed.
 std::string prompt_password(const std::string &label);
+// Reads a positive amount of money (at most 2 decimals). Returned as text so it
+// goes into NUMERIC columns exactly, without floating point rounding.
+std::string prompt_amount(const std::string &label);
 int prompt_int(const std::string &label, int min, int max);
 
 struct MenuItem {

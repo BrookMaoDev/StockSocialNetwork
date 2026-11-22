@@ -1,6 +1,7 @@
 #include "ui.hpp"
 
 #include <iostream>
+#include <regex>
 
 #include <termios.h>
 #include <unistd.h>
@@ -50,6 +51,19 @@ std::string prompt_password(const std::string &label) {
         line.pop_back();
     }
     return line;
+}
+
+std::string prompt_amount(const std::string &label) {
+    // Up to 13 digits before the point: fits NUMERIC(15,2).
+    static const std::regex money(R"(\d{1,13}(\.\d{1,2})?)");
+    while (true) {
+        std::string raw = prompt(label);
+        bool positive = raw.find_first_not_of("0.") != std::string::npos;
+        if (std::regex_match(raw, money) && positive) {
+            return raw;
+        }
+        std::cout << "Enter a positive amount like 100 or 25.50" << std::endl;
+    }
 }
 
 // Keeps asking until the user enters a whole number in [min, max].

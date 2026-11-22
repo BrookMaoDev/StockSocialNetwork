@@ -106,6 +106,14 @@ CREATE TABLE IF NOT EXISTS pair_stats (
     CHECK (symbol1 < symbol2)
 );
 
+-- Functions
+
+-- Most recent close for a symbol, or NULL if unknown. Fast: it walks the
+-- (symbol, timestamp) primary key index backwards and stops at the first row.
+CREATE OR REPLACE FUNCTION latest_close(sym VARCHAR) RETURNS DOUBLE PRECISION AS $$
+    SELECT close FROM daily_prices WHERE symbol = sym ORDER BY "timestamp" DESC LIMIT 1
+$$ LANGUAGE sql STABLE;
+
 -- Triggers
 
 -- Lists can only be shared with friends of the creator.
