@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+#include <termios.h>
+#include <unistd.h>
+
 static std::string trim(const std::string &s) {
     const char *whitespace = " \t\r";
     size_t start = s.find_first_not_of(whitespace);
@@ -19,6 +22,34 @@ std::string prompt(const std::string &label) {
         throw InputClosed();
     }
     return trim(line);
+}
+
+std::string prompt_password(const std::string &label) {
+    std::cout << label << ": " << std::flush;
+
+    // Turn off terminal echo (skipped when input is piped, e.g. in tests).
+    termios old;
+    bool tty = tcgetattr(STDIN_FILENO, &old) == 0;
+    if (tty) {
+        termios quiet = old;
+        quiet.c_lflag &= ~ECHO;
+        tcsetattr(STDIN_FILENO, TCSANOW, &quiet);
+    }
+
+    std::string line;
+    bool ok = static_cast<bool>(std::getline(std::cin, line));
+
+    if (tty) {
+        tcsetattr(STDIN_FILENO, TCSANOW, &old);
+        std::cout << std::endl; // the user's Enter wasn't echoed
+    }
+    if (!ok) {
+        throw InputClosed();
+    }
+    if (!line.empty() && line.back() == '\r') {
+        line.pop_back();
+    }
+    return line;
 }
 
 // Keeps asking until the user enters a whole number in [min, max].

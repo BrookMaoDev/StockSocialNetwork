@@ -18,7 +18,7 @@ CXXFLAGS = -std=c++20 -Wall -O3
 # library define the global `std::string const type_name`, and both resolve to
 # the same object in memory. Each side destroys it at program exit, so it gets
 # freed twice (double free).
-LIBS = -l:libpqxx.a -lpq
+LIBS = -l:libpqxx.a -lpq -lcrypt
 
 #
 # Source files

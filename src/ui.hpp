@@ -12,6 +12,8 @@ struct InputClosed : std::runtime_error {
 
 // Reads one line, with leading/trailing whitespace removed.
 std::string prompt(const std::string &label);
+// Reads one line without echoing it to the terminal. Not trimmed.
+std::string prompt_password(const std::string &label);
 int prompt_int(const std::string &label, int min, int max);
 
 struct MenuItem {

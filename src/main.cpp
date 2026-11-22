@@ -1,6 +1,7 @@
 #include <cstring>
 #include <iostream>
 
+#include "auth.hpp"
 #include "db.hpp"
 #include "session.hpp"
 #include "ui.hpp"
@@ -19,12 +20,6 @@ static void main_menu(Session &session) {
     }, "Quit", [&] { return session.username.empty(); });
 }
 
-// Placeholder until step 4: logs in as any username without checking.
-static void login(Session &session) {
-    session.username = prompt("Username");
-    main_menu(session);
-}
-
 int main(int argc, char *argv[]) {
     bool reset = argc > 1 && std::strcmp(argv[1], "--reset") == 0;
 
@@ -33,8 +28,12 @@ int main(int argc, char *argv[]) {
         Session session{conn, ""};
 
         run_menu("StockSocial", {
-            {"Register", not_implemented},
-            {"Log in", [&] { login(session); }},
+            {"Register", [&] { register_user(session); }},
+            {"Log in", [&] {
+                if (login(session)) {
+                    main_menu(session);
+                }
+            }},
         }, "Quit", [&] { return !session.username.empty(); });
     } catch (const InputClosed &) {
         std::cout << std::endl;
