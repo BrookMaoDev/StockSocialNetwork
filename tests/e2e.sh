@@ -79,6 +79,12 @@ l1() {
 }
 open_l1() { echo "4\n3\n$(l1 $1)\n"; }
 
+echo "== Concurrent startup"
+codes=$(for i in 1 2 3 4 5 6; do (./stocksocial </dev/null >/dev/null 2>&1; echo $?) & done; wait)
+if [ "$(tr -d '\n' <<<"$codes")" == "000000" ]; then pass=$((pass+1)); echo "PASS  6 clients start at once"
+else fail=$((fail+1)); echo "FAIL  6 clients start at once: exit codes $(tr '\n' ' ' <<<"$codes")"; fi
+sql   "schema hash recorded"        "SELECT count(*) FROM schema_version" "1"
+
 echo "== Start menu / auth ($A, $B, $C)"
 check "register A"                  "1\n$A\npw\npw\n"                    "Registered $A"
 check "register B, C"               "1\n$B\npw\npw\n1\n$C\npw\npw\n"     "Registered $C"
@@ -105,6 +111,7 @@ check "open cancel"                 "$(login $A)1\n3\n0\n1\n"            "Main"
 check "view empty"                  "$(login $A)1\n3\n1\n1\n"            "Cash: 0.00"
 check "deposit invalid formats"     "$(login $A)1\n3\n1\n2\n-5\n1.234\nabc\n0\n0.00\n1e5\n1000\n" "Deposited 1000"
 sql   "deposit stored exactly"      "SELECT cash FROM portfolios WHERE username='$A' AND name='Main'" "1000.00"
+check "deposit max in message"     "$(login $A)1\n3\n1\n2\n10000000000000\n"  "at most 9999999999999.99"
 check "deposit cents"               "$(login $A)1\n3\n1\n2\n0.05\n"      "Deposited 0.05"
 check "deposit overflow"            "$(login $A)1\n3\n1\n2\n9999999999999.99\n" "Balance would be too large"
 check "withdraw too much"           "$(login $A)1\n3\n1\n3\n5000\n"      "Not enough cash"
@@ -146,10 +153,15 @@ check "add: new symbol declined"    "$(login $A)2\n2\n$SYM\nn\n"         "new sy
 sql   "declined symbol not created" "SELECT count(*) FROM stocks WHERE symbol='$SYM'" "0"
 check "add: symbol too long"        "$(login $A)2\n2\nABCDEFGHI\n"       "1 to 8 characters"
 check "add: invalid date, asked first" "$(login $A)2\n2\nAAPL\n2018-02-30\n" "Invalid date 2018-02-30"
+check "add: future date"           "$(login $A)2\n2\nAAPL\n2099-01-01\n" "can't be in the future"
 check "add: new symbol (Y), blanks" "$(login $A)2\n2\n$SYM\nY\n2018-02-07\n\n\n\n10\n100\n" "Added $SYM close 10 on 2018-02-07"
 sql   "blanks stored as NULL"       "SELECT coalesce(open::text,'NULL'), close FROM daily_prices WHERE symbol='$SYM'" "NULL|10"
 count "add: zero and bad decimals rejected" "$(login $A)2\n2\n$SYM\n2018-02-08\nabc\n0\n11\n12\n10.5\n0.0\n12\n500\n" "Enter a positive number" 3
 sql   "...then added"               "SELECT close FROM daily_prices WHERE symbol='$SYM' AND \"timestamp\"='2018-02-08'" "12"
+check "add: low above high"         "$(login $A)2\n2\n$SYM\n2018-02-09\n\n10\n12\n11\n1\n" "low <= open, close <= high"
+check "add: close above high"       "$(login $A)2\n2\n$SYM\n2018-02-09\n\n10\n\n11\n1\n" "low <= open, close <= high"
+check "add: open below low"         "$(login $A)2\n2\n$SYM\n2018-02-09\n4\n\n5\n6\n1\n" "low <= open, close <= high"
+sql   "rejected prices not stored"  "SELECT count(*) FROM daily_prices WHERE symbol='$SYM' AND \"timestamp\"='2018-02-09'" "0"
 check "add: duplicate date"         "$(login $A)2\n2\n$SYM\n2018-02-08\n\n\n\n1\n1\n" "already has a price for 2018-02-08"
 check "add: huge number"            "$(login $A)2\n2\n$SYM\n2018-02-09\n\n\n\n1$(printf '0%.0s' {1..400})\n1\n" "A price is too large"
 check "history of new symbol (2 pts)" "$(login $A)2\n1\n$SYM\n5\n\n"     "2018-02-07 to 2018-02-08 \(2 trading days\)"
@@ -206,13 +218,17 @@ check "shared: B sees own"          "$(login $B)$(open_l1 $B)2\n"        "^$B \(
 absent "shared: B can't see C's"    "$(login $B)$(open_l1 $B)2\n"        "^$C \("
 check "creator sees both"           "$(login $A)$(open_l1 $A)2\n"        "^$C \("
 check "B deletes: only own offered" "$(login $B)$(open_l1 $B)4\n2\n"     "Enter a whole number from 0 to 1"
-check "creator deletes C's"         "$(login $A)$(open_l1 $A)4\n2\n"     "Deleted review by $C"
+check "delete review: no"           "$(login $A)$(open_l1 $A)4\n2\nn\n2\n" "^$C \\("
+check "creator deletes C's"         "$(login $A)$(open_l1 $A)4\n2\ny\n"  "Deleted review by $C"
 
 echo "== Unfriend unshares, delete list"
 check "A removes B"                 "$(login $A)3\n5\n1\n"               "Removed $B"
 sql   "only B's share row deleted"  "SELECT string_agg(sw.username, ',') FROM shared_with sw JOIN lists l ON l.id=sw.list_id WHERE l.creator='$A'" "$C"
 check "B on cooldown"               "$(login $B)3\n4\n$A\n"              "another request in"
 absent "B no longer sees L1"        "$(login $B)4\n1\n"                  "L1 \\["
+check "My reviews: none"            "$(login $A)4\n4\n"                  "haven't written any reviews"
+check "My reviews: lost access, still deletable" "$(login $B)4\n4\n1\ny\n" "Deleted your review"
+sql   "ex-friend's review gone"     "SELECT count(*) FROM reviews WHERE username='$B'" "0"
 sql   "trigger: ex-friend can't review" "INSERT INTO reviews (list_id, username, content) SELECT id, '$B', 'x' FROM lists WHERE creator='$A'" "ERROR:  You can only review lists you can see
 CONTEXT:  PL/pgSQL function check_review_access() line 4 at RAISE"
 check "delete list: no"             "$(login $A)$(open_l1 $A)10\nn\n1\n" "L1 \["

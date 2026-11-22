@@ -83,7 +83,7 @@ void delete_review(Session &s, int list_id) {
         }
     }
     auto choice = choose(reviewers, "Delete review by", "No reviews you can delete");
-    if (!choice) {
+    if (!choice || !confirm("Delete the review by " + reviewers[*choice] + "?")) {
         return;
     }
     pqxx::work tx(s.conn);
@@ -91,4 +91,29 @@ void delete_review(Session &s, int list_id) {
             pqxx::params{list_id, s.username, reviewers[*choice]});
     tx.commit();
     std::cout << "Deleted review by " << reviewers[*choice] << std::endl;
+}
+
+void my_reviews(Session &s) {
+    std::vector<int> list_ids;
+    std::vector<std::string> labels;
+    {
+        pqxx::nontransaction tx(s.conn);
+        for (auto [id, name, creator, content] : tx.query<int, std::string, std::string, std::string>(
+                 "SELECT l.id, l.name, l.creator, r.content FROM reviews r JOIN lists l ON l.id = r.list_id "
+                 "WHERE r.username = $1 ORDER BY l.name, l.creator",
+                 pqxx::params{s.username})) {
+            std::string preview = content.substr(0, content.find('\n')).substr(0, 40);
+            list_ids.push_back(id);
+            labels.push_back(name + " by " + creator + ": " + preview);
+        }
+    }
+    auto choice = choose(labels, "Delete review on", "You haven't written any reviews");
+    if (!choice || !confirm("Delete your review?")) {
+        return;
+    }
+    pqxx::work tx(s.conn);
+    tx.exec("DELETE FROM reviews WHERE list_id = $1 AND username = $2",
+            pqxx::params{list_ids[*choice], s.username});
+    tx.commit();
+    std::cout << "Deleted your review" << std::endl;
 }

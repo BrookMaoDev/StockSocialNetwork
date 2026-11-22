@@ -111,7 +111,7 @@ std::string prompt_amount(const std::string &label) {
         if (std::regex_match(raw, money) && positive) {
             return raw;
         }
-        std::cout << "Enter a positive amount like 100 or 25.50" << std::endl;
+        std::cout << "Enter a positive amount like 100 or 25.50 (at most 9999999999999.99)" << std::endl;
     }
 }
 

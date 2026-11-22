@@ -14,6 +14,7 @@ static const char SCHEMA_SQL[] = {
 
 static const std::string APP_DB = "stocksocial";
 static const char *HISTORY_CSV = "data/SP500History.csv";
+static const long SETUP_LOCK = 7428301; // any fixed number, shared by all clients
 
 static std::string env_or(const char *name, const char *fallback) {
     const char *value = std::getenv(name);
@@ -40,19 +41,32 @@ static void ensure_database(bool reset) {
     bool exists = tx.query_value<bool>(
         "SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = " + tx.quote(APP_DB) + ")");
     if (!exists) {
-        tx.exec("CREATE DATABASE " + tx.quote_name(APP_DB));
+        try {
+            tx.exec("CREATE DATABASE " + tx.quote_name(APP_DB));
+        } catch (const pqxx::sql_error &e) {
+            if (e.sqlstate() != "42P04") { // duplicate_database: another client just created it
+                throw;
+            }
+        }
     }
 }
 
-static void apply_schema(pqxx::connection &conn) {
-    pqxx::work tx(conn);
+// Applies schema.sql only if it changed since it was last applied (its MD5 is
+// stored in schema_version), so normal startups don't redefine anything.
+static void apply_schema(pqxx::work &tx) {
+    tx.exec("CREATE TABLE IF NOT EXISTS schema_version (md5 TEXT NOT NULL)");
+    std::string md5 = tx.query_value<std::string>("SELECT md5($1)", pqxx::params{SCHEMA_SQL});
+    if (tx.query_value<bool>("SELECT EXISTS (SELECT 1 FROM schema_version WHERE md5 = $1)",
+                             pqxx::params{md5})) {
+        return;
+    }
     tx.exec(SCHEMA_SQL);
-    tx.commit();
+    tx.exec("DELETE FROM schema_version");
+    tx.exec("INSERT INTO schema_version (md5) VALUES ($1)", pqxx::params{md5});
 }
 
 // Loads the historical CSV once, while daily_prices is still empty.
-static void load_history(pqxx::connection &conn) {
-    pqxx::work tx(conn);
+static void load_history(pqxx::work &tx) {
     if (tx.query_value<bool>("SELECT EXISTS (SELECT 1 FROM daily_prices)")) {
         return;
     }
@@ -107,13 +121,18 @@ static void load_history(pqxx::connection &conn) {
         std::cerr << "Warning: skipped " << lines - inserted << " duplicate (symbol, date) rows" << std::endl;
     }
     std::cout << "Loaded " << inserted << " historical prices" << std::endl;
-    tx.commit();
 }
 
 pqxx::connection setup_database(bool reset) {
     ensure_database(reset);
     pqxx::connection conn(conninfo(APP_DB));
-    apply_schema(conn);
-    load_history(conn);
+
+    // One transaction holding an advisory lock: clients starting at the same time
+    // wait their turn here instead of deadlocking on each other's schema changes.
+    pqxx::work tx(conn);
+    tx.exec("SELECT pg_advisory_xact_lock(" + std::to_string(SETUP_LOCK) + ")");
+    apply_schema(tx);
+    load_history(tx);
+    tx.commit();
     return conn;
 }

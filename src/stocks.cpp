@@ -81,9 +81,13 @@ static void add_price(Session &s) {
             return;
         }
         // Check the date on its own, so the insert's data_exception can only mean a bad number.
+        // Future dates are rejected: they'd become every holder's "last close".
         date = prompt("Date (YYYY-MM-DD)");
         try {
-            tx.exec("SELECT $1::date", pqxx::params{date});
+            if (!tx.query_value<bool>("SELECT $1::date <= current_date", pqxx::params{date})) {
+                std::cout << "Date can't be in the future" << std::endl;
+                return;
+            }
         } catch (const pqxx::data_exception &) {
             std::cout << "Invalid date " << date << std::endl;
             return;
@@ -97,6 +101,18 @@ static void add_price(Session &s) {
 
     try {
         pqxx::work tx(s.conn);
+        // low <= open, close <= high, skipping whichever of open/high/low were left blank.
+        bool consistent = tx.query_value<bool>(R"(
+            SELECT coalesce(l, '-infinity') <= coalesce(h, 'infinity')
+               AND coalesce(o, c) BETWEEN coalesce(l, '-infinity') AND coalesce(h, 'infinity')
+               AND c BETWEEN coalesce(l, '-infinity') AND coalesce(h, 'infinity')
+            FROM (SELECT $1::double precision AS o, $2::double precision AS h,
+                         $3::double precision AS l, $4::double precision AS c) AS p
+        )", pqxx::params{open, high, low, close});
+        if (!consistent) {
+            std::cout << "Prices must satisfy low <= open, close <= high" << std::endl;
+            return;
+        }
         tx.exec("INSERT INTO stocks (symbol) VALUES ($1) ON CONFLICT DO NOTHING", pqxx::params{symbol});
         tx.exec(R"(
             INSERT INTO daily_prices (symbol, "timestamp", open, high, low, close, volume)

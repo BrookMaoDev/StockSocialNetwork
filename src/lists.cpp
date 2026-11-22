@@ -224,5 +224,6 @@ void lists_menu(Session &session) {
                 list_menu(session, lists[*choice]);
             }
         }},
+        {"My reviews", [&] { my_reviews(session); }},
     }, "Back");
 }
