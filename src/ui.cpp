@@ -27,6 +27,26 @@ std::string prompt(const std::string &label) {
     return trim(line);
 }
 
+std::string prompt_multiline(const std::string &label) {
+    std::cout << label << " (end with an empty line):" << std::endl;
+    std::string text, line;
+    while (true) {
+        if (!std::getline(std::cin, line)) {
+            throw InputClosed();
+        }
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        if (line.empty()) {
+            return text;
+        }
+        if (!text.empty()) {
+            text += '\n';
+        }
+        text += line;
+    }
+}
+
 std::string prompt_password(const std::string &label) {
     std::cout << label << ": " << std::flush;
 

@@ -13,6 +13,10 @@ struct InputClosed : std::runtime_error {
 
 // Reads one line, with leading/trailing whitespace removed.
 std::string prompt(const std::string &label);
+// Reads lines until an empty line and returns them joined with newlines (empty
+// if the first line is empty).
+std::string prompt_multiline(const std::string &label);
+
 // Reads one line without echoing it to the terminal. Not trimmed.
 std::string prompt_password(const std::string &label);
 // Reads a stock symbol, uppercased.

@@ -165,3 +165,17 @@ CREATE OR REPLACE TRIGGER friends_unshare_on_unfriend
     AFTER UPDATE OF status ON friends
     FOR EACH ROW WHEN (OLD.status = 'accepted' AND NEW.status <> 'accepted')
     EXECUTE FUNCTION unshare_on_unfriend();
+
+-- Users can only write or edit reviews on lists they can see.
+CREATE OR REPLACE FUNCTION check_review_access() RETURNS TRIGGER AS $$
+BEGIN
+    IF can_access(NEW.list_id, NEW.username) IS NOT TRUE THEN -- also rejects NULL
+        RAISE EXCEPTION 'You can only review lists you can see';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER reviews_require_access
+    BEFORE INSERT OR UPDATE ON reviews
+    FOR EACH ROW EXECUTE FUNCTION check_review_access();

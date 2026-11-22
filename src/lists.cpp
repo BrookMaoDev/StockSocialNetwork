@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "friends.hpp"
+#include "reviews.hpp"
 #include "ui.hpp"
 
 struct List {
@@ -192,6 +193,9 @@ static void list_menu(Session &s, List l) {
     bool deleted = false;
     std::vector<MenuItem> items = {
         {"View", [&] { view_list(s, l); }},
+        {"Reviews", [&] { view_reviews(s, l.id); }},
+        {"Write or edit your review", [&] { write_review(s, l.id); }},
+        {"Delete a review", [&] { delete_review(s, l.id); }},
     };
     if (l.creator == s.username) {
         items.insert(items.end(), {
