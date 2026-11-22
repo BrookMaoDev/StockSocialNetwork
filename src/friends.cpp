@@ -31,7 +31,7 @@ static std::vector<std::string> names(Session &s, const std::string &sql) {
     return result;
 }
 
-static std::vector<std::string> friends_of(Session &s) {
+std::vector<std::string> friends_of(Session &s) {
     return names(s, R"(
         SELECT CASE WHEN requester = $1 THEN recipient ELSE requester END AS friend
         FROM friends WHERE $1 IN (requester, recipient) AND status = 'accepted'

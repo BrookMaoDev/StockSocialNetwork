@@ -114,6 +114,17 @@ CREATE OR REPLACE FUNCTION latest_close(sym VARCHAR) RETURNS DOUBLE PRECISION AS
     SELECT close FROM daily_prices WHERE symbol = sym ORDER BY "timestamp" DESC LIMIT 1
 $$ LANGUAGE sql STABLE;
 
+-- Whether user `who` can see list `lid`.
+CREATE OR REPLACE FUNCTION can_access(lid INTEGER, who VARCHAR) RETURNS BOOLEAN AS $$
+    SELECT ((SELECT creator FROM lists WHERE id = lid) = who)
+        OR EXISTS (
+            SELECT 1 FROM lists
+            WHERE id = lid
+              AND (visibility = 'public'
+                OR (visibility = 'shared'
+                    AND EXISTS (SELECT 1 FROM shared_with WHERE list_id = lid AND username = who))))
+$$ LANGUAGE sql STABLE;
+
 -- Triggers
 
 -- Lists can only be shared with friends of the creator.

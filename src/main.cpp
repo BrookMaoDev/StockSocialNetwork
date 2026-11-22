@@ -4,21 +4,18 @@
 #include "auth.hpp"
 #include "db.hpp"
 #include "friends.hpp"
+#include "lists.hpp"
 #include "portfolio.hpp"
 #include "session.hpp"
 #include "stocks.hpp"
 #include "ui.hpp"
-
-static void not_implemented() {
-    std::cout << "Not implemented yet" << std::endl;
-}
 
 static void main_menu(Session &session) {
     run_menu("Logged in as " + session.username, {
         {"Portfolios", [&] { portfolios_menu(session); }},
         {"Stocks", [&] { stocks_menu(session); }},
         {"Friends", [&] { friends_menu(session); }},
-        {"Stock lists", not_implemented},
+        {"Stock lists", [&] { lists_menu(session); }},
         {"Log out", [&] { session.username.clear(); }},
     }, "Quit", [&] { return session.username.empty(); });
 }
