@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -14,6 +15,13 @@ struct InputClosed : std::runtime_error {
 std::string prompt(const std::string &label);
 // Reads one line without echoing it to the terminal. Not trimmed.
 std::string prompt_password(const std::string &label);
+// Reads a stock symbol, uppercased.
+std::string prompt_symbol(const std::string &label);
+
+// Reads a non-negative decimal number as text. If `optional`, a blank line
+// returns nullopt (stored as NULL).
+std::optional<std::string> prompt_decimal(const std::string &label, bool optional);
+
 // Reads a positive amount of money (at most 2 decimals). Returned as text so it
 // goes into NUMERIC columns exactly, without floating point rounding.
 std::string prompt_amount(const std::string &label);

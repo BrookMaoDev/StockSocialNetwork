@@ -1,5 +1,7 @@
 #include "ui.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <regex>
 
@@ -51,6 +53,26 @@ std::string prompt_password(const std::string &label) {
         line.pop_back();
     }
     return line;
+}
+
+std::string prompt_symbol(const std::string &label) {
+    std::string s = prompt(label);
+    std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+    return s;
+}
+
+std::optional<std::string> prompt_decimal(const std::string &label, bool optional) {
+    static const std::regex decimal(R"(\d+(\.\d+)?)");
+    while (true) {
+        std::string raw = prompt(label);
+        if (raw.empty() && optional) {
+            return std::nullopt;
+        }
+        if (std::regex_match(raw, decimal)) {
+            return raw;
+        }
+        std::cout << "Enter a number like 42 or 158.37" << std::endl;
+    }
 }
 
 std::string prompt_amount(const std::string &label) {

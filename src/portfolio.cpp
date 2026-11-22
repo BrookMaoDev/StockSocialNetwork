@@ -1,18 +1,12 @@
 #include "portfolio.hpp"
 
-#include <algorithm>
-#include <cctype>
 #include <climits>
 #include <iomanip>
 #include <iostream>
 #include <optional>
 
+#include "stocks.hpp"
 #include "ui.hpp"
-
-static std::string upper(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), ::toupper);
-    return s;
-}
 
 // Value of each holding = quantity * latest close, rounded to cents.
 static const char *TOTAL_VALUE_SQL = R"(
@@ -153,7 +147,7 @@ static void transfer(Session &s, const std::string &from) {
 }
 
 static void buy(Session &s, const std::string &name) {
-    std::string symbol = upper(prompt("Symbol"));
+    std::string symbol = prompt_symbol("Symbol");
     int shares = prompt_int("Shares to buy", 1, INT_MAX);
     try {
         pqxx::work tx(s.conn);
@@ -182,7 +176,7 @@ static void buy(Session &s, const std::string &name) {
 }
 
 static void sell(Session &s, const std::string &name) {
-    std::string symbol = upper(prompt("Symbol"));
+    std::string symbol = prompt_symbol("Symbol");
     int shares = prompt_int("Shares to sell", 1, INT_MAX);
     try {
         pqxx::work tx(s.conn);
@@ -222,6 +216,24 @@ static void sell(Session &s, const std::string &name) {
     }
 }
 
+// Lets the user pick one of the portfolio's holdings and shows its history.
+static void holding_history(Session &s, const std::string &name) {
+    pqxx::nontransaction tx(s.conn);
+    auto res = tx.exec("SELECT symbol FROM holds WHERE username = $1 AND portfolio_name = $2 ORDER BY symbol",
+                       pqxx::params{s.username, name});
+    if (res.empty()) {
+        std::cout << "No stock holdings" << std::endl;
+        return;
+    }
+    for (int i = 0; i < res.size(); ++i) {
+        std::cout << i + 1 << ". " << res[i][0].c_str() << "\n";
+    }
+    int choice = prompt_int("Holding (0 to cancel)", 0, res.size());
+    if (choice != 0) {
+        show_history(s, res[choice - 1][0].as<std::string>());
+    }
+}
+
 static void portfolio_menu(Session &s, const std::string &name) {
     run_menu("Portfolio: " + name, {
         {"View", [&] { view_portfolio(s, name); }},
@@ -230,6 +242,7 @@ static void portfolio_menu(Session &s, const std::string &name) {
         {"Transfer cash to another portfolio", [&] { transfer(s, name); }},
         {"Buy stock", [&] { buy(s, name); }},
         {"Sell stock", [&] { sell(s, name); }},
+        {"Price history of a holding", [&] { holding_history(s, name); }},
     }, "Back");
 }
 

@@ -5,6 +5,7 @@
 #include "db.hpp"
 #include "portfolio.hpp"
 #include "session.hpp"
+#include "stocks.hpp"
 #include "ui.hpp"
 
 static void not_implemented() {
@@ -14,7 +15,7 @@ static void not_implemented() {
 static void main_menu(Session &session) {
     run_menu("Logged in as " + session.username, {
         {"Portfolios", [&] { portfolios_menu(session); }},
-        {"Stocks", not_implemented},
+        {"Stocks", [&] { stocks_menu(session); }},
         {"Friends", not_implemented},
         {"Stock lists", not_implemented},
         {"Log out", [&] { session.username.clear(); }},
